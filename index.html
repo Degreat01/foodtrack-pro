@@ -487,15 +487,15 @@ async function connectFirebase(cfg) {
     };
 
     window._setInventory = async (item, data) => {
-      if (!window._firebaseReady || !window._fbDB) { window._db_inventory[item] = data; return; }
+      if (!window._firebaseReady || !window._fbDB) { window._db_inventory[encodeKey(item)] = {...data, _name: item}; return; }
       setSyncStatus('syncing', 'Saving...');
-      await set(ref(window._fbDB, 'inventory/' + encodeKey(item)), data);
+      await set(ref(window._fbDB, 'inventory/' + encodeKey(item)), {...data, _name: item});
       setSyncStatus('live', 'Live — all synced');
     };
 
-    window._deleteInventory = async (item) => {
-      if (!window._firebaseReady || !window._fbDB) { delete window._db_inventory[item]; return; }
-      await remove(ref(window._fbDB, 'inventory/' + encodeKey(item)));
+    window._deleteInventory = async (fbKey) => {
+      if (!window._firebaseReady || !window._fbDB) { delete window._db_inventory[fbKey]; return; }
+      await remove(ref(window._fbDB, 'inventory/' + fbKey));
     };
 
     window._pushAudit = async (data) => {
@@ -533,8 +533,8 @@ function initLocalFallback() {
   window._updateSale = (id, data) => { const i = window._db_sales.findIndex(s=>s.id===id); if(i>-1) window._db_sales[i]={...window._db_sales[i],...data}; };
   window._pushExpense = (data) => { window._db_expenses.push(data); renderExpenses(); };
   window._updateExpense = (id, data) => { const i = window._db_expenses.findIndex(e=>e.id===id); if(i>-1) window._db_expenses[i]={...window._db_expenses[i],...data}; };
-  window._setInventory = (item, data) => { window._db_inventory[item] = data; renderInventory(); };
-  window._deleteInventory = (item) => { delete window._db_inventory[item]; renderInventory(); };
+  window._setInventory = (item, data) => { window._db_inventory[encodeKey(item)] = {...data, _name: item}; renderInventory(); };
+  window._deleteInventory = (fbKey) => { delete window._db_inventory[fbKey]; renderInventory(); };
   window._pushAudit = () => {};
 
   renderAll(); updateDashboard();
@@ -625,10 +625,12 @@ function ts(){return new Date().toLocaleString('en-NG',{day:'2-digit',month:'sho
 function fmt(n){return '₦'+Math.round(n).toLocaleString('en-NG');}
 function gid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 function calcGain(item,qty){
-  const inv=window._db_inventory[item]||window._db_inventory[item.replace(/[.#$[\]/]/g,'_')];
-  if(!inv||!inv.gainPerUnit)return 0;
-  return inv.gainPerUnit*qty;
+  const inv=window._db_inventory||{};
+  const key=Object.keys(inv).find(k=>(inv[k]._name||k)===item || k===encodeKey(item));
+  if(!key||!inv[key]||!inv[key].gainPerUnit)return 0;
+  return inv[key].gainPerUnit*qty;
 }
+function encodeKey(str){return str.replace(/[.#$[\]/]/g,'_');}
 const trashSVG=`<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h12"/><path d="M5 4V2.5h6V4"/><path d="M6 7v5M10 7v5"/><path d="M3 4l1 9h8l1-9"/></svg>`;
 
 async function addSale() {
@@ -642,9 +644,9 @@ async function addSale() {
   const gain=calcGain(item,qty);
   const data={ts:ts(),company,item,qty,price,total:qty*price,gain,deleted:false};
   await window._pushSale(data);
-  const invKey=item.replace(/[.#$[\]/]/g,'_');
-  const inv=window._db_inventory[item]||window._db_inventory[invKey];
-  if(inv){await window._setInventory(item,{...inv,qty:Math.max(0,inv.qty-qty)});}
+  const inv=window._db_inventory;
+  const invKey=Object.keys(inv).find(k=>(inv[k]._name||k)===item || k===encodeKey(item));
+  if(invKey && inv[invKey]){await window._setInventory(item,{...inv[invKey],qty:Math.max(0,(inv[invKey].qty||0)-qty)});}
   await window._pushAudit({ts:ts(),type:'sale',label:item,company,qty,amount:qty*price,note:''});
   document.getElementById('s-qty').value=1;
   document.getElementById('s-price').value='';
@@ -656,8 +658,9 @@ async function deleteSale(id) {
   const e=window._db_sales.find(s=>s.id===id);
   if(!e)return;
   await window._updateSale(id, {...e, deleted:true});
-  const inv=window._db_inventory[e.item];
-  if(inv)await window._setInventory(e.item,{...inv,qty:(inv.qty||0)+e.qty});
+  const inv=window._db_inventory;
+  const invKey=Object.keys(inv).find(k=>(inv[k]._name||k)===e.item || k===encodeKey(e.item));
+  if(invKey && inv[invKey])await window._setInventory(e.item,{...inv[invKey],qty:(inv[invKey].qty||0)+e.qty});
   await window._pushAudit({ts:ts(),type:'deleted',label:'SALE DELETED: '+e.item,company:e.company,qty:e.qty,amount:e.total,note:'Removed by user'});
 }
 
@@ -699,10 +702,12 @@ async function updateStock() {
   document.getElementById('i-custom').value='';
 }
 
-async function deleteInventory(item) {
-  if(!confirm('Remove "'+item+'" from inventory?'))return;
-  await window._pushAudit({ts:ts(),type:'deleted',label:'STOCK DELETED: '+item,company:'',qty:0,amount:0,note:'Inventory removed'});
-  await window._deleteInventory(item);
+async function deleteInventory(fbKey) {
+  const record = window._db_inventory[fbKey];
+  const displayName = (record && record._name) ? record._name : fbKey;
+  if(!confirm('Remove "'+displayName+'" from inventory?'))return;
+  await window._pushAudit({ts:ts(),type:'deleted',label:'STOCK DELETED: '+displayName,company:'',qty:0,amount:0,note:'Inventory removed'});
+  await window._deleteInventory(fbKey);
 }
 
 function renderSales() {
@@ -731,15 +736,24 @@ function renderInventory() {
   const inv=window._db_inventory||{};
   const keys=Object.keys(inv);
   if(!keys.length){tb.innerHTML='<tr><td colspan="7" class="empty">No stock recorded yet</td></tr>';return;}
-  tb.innerHTML=keys.map(k=>{
-    const{qty,costPerUnit,gainPerUnit,alert}=inv[k];
+  window._invKeys = keys;
+  tb.innerHTML=keys.map((k,idx)=>{
+    const{qty,costPerUnit,gainPerUnit,alert,_name}=inv[k];
+    const displayName = _name || k;
     const low=qty<=alert;
-    return`<tr><td title="${k}">${k}</td><td style="color:${low?'var(--red-tx)':'inherit'}">${qty}</td>
+    return`<tr><td title="${displayName}">${displayName}</td><td style="color:${low?'var(--red-tx)':'inherit'}">${qty}</td>
       <td>${costPerUnit?fmt(costPerUnit):'-'}</td>
       <td><span class="badge b-gain">${gainPerUnit?fmt(gainPerUnit):'Not set'}</span></td>
       <td>${alert}</td><td><span class="badge ${low?'b-low':'b-ok'}">${low?'Low':'OK'}</span></td>
-      <td><button class="del-btn" onclick="deleteInventory('${k.replace(/\\/g,'\\\\').replace(/'/g,"\\'")}'">${trashSVG}</button></td></tr>`;
+      <td><button class="del-btn" data-idx="${idx}" onclick="deleteInventoryByIdx(this)">${trashSVG}</button></td></tr>`;
   }).join('');
+}
+
+function deleteInventoryByIdx(btn) {
+  const idx = parseInt(btn.getAttribute('data-idx'), 10);
+  const fbKey = (window._invKeys || [])[idx];
+  if (!fbKey) return;
+  deleteInventory(fbKey);
 }
 
 function renderLog() {
