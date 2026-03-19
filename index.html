@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1D9E75">
+<title>FoodTrack Pro</title>
+<style>
+:root {
+  --bg:#ffffff; --bg2:#f6f6f3; --bg3:#eeeeea;
+  --text:#171715; --text2:#636360; --text3:#9a9a96;
+  --border:rgba(0,0,0,0.09); --border2:rgba(0,0,0,0.18);
+  --accent:#1D9E75; --accent2:#158a63;
+  --green-bg:#eaf3de; --green-tx:#27500A;
+  --red-bg:#fcebeb;   --red-tx:#791F1F;
+  --blue-bg:#e6f1fb;  --blue-tx:#0C447C;
+  --amber-bg:#faeeda; --amber-tx:#633806;
+  --card:#ffffff; --shadow:0 1px 3px rgba(0,0,0,0.07);
+  --radius:10px; --radius-lg:14px;
+}
+[data-theme="dark"] {
+  --bg:#141412; --bg2:#1e1e1b; --bg3:#282825;
+  --text:#f0f0ec; --text2:#a0a09c; --text3:#6a6a66;
+  --border:rgba(255,255,255,0.08); --border2:rgba(255,255,255,0.16);
+  --green-bg:#173404; --green-tx:#C0DD97;
+  --red-bg:#501313;   --red-tx:#F7C1C1;
+  --blue-bg:#042C53;  --blue-tx:#B5D4F4;
+  --amber-bg:#412402; --amber-tx:#FAC775;
+  --card:#1e1e1b; --shadow:0 1px 3px rgba(0,0,0,0.3);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:var(--bg3);color:var(--text);min-height:100vh;font-size:15px;transition:background .2s,color .2s}
+.shell{max-width:980px;margin:0 auto;padding:0 0 5rem}
+
+/* ── FIREBASE CONFIG BANNER ── */
+.config-banner{background:var(--amber-bg);border-bottom:1px solid rgba(186,117,23,.3);padding:12px 1rem;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.config-banner.hidden{display:none}
+.config-banner svg{width:18px;height:18px;color:var(--amber-tx);flex-shrink:0}
+.config-banner p{font-size:13px;color:var(--amber-tx);flex:1;line-height:1.4}
+.config-banner a{color:var(--amber-tx);font-weight:600;text-decoration:underline;cursor:pointer}
+
+/* ── SYNC STATUS ── */
+.sync-dot{width:8px;height:8px;border-radius:50%;background:#9a9a96;flex-shrink:0;transition:background .3s}
+.sync-dot.live{background:#1D9E75}
+.sync-dot.error{background:#E24B4A}
+.sync-dot.syncing{background:#EF9F27;animation:pulse .8s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.sync-label{font-size:11px;color:var(--text2)}
+
+/* ── TOPBAR ── */
+.topbar{background:var(--bg);border-bottom:0.5px solid var(--border);padding:0 1rem;display:flex;align-items:center;justify-content:space-between;height:58px;position:sticky;top:0;z-index:100;box-shadow:var(--shadow)}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-mark{width:36px;height:36px;border-radius:9px;background:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.logo-mark svg{width:22px;height:22px}
+.logo-name{font-size:15px;font-weight:700;letter-spacing:-.02em;color:var(--text)}
+.logo-sub{font-size:11px;color:var(--text2);display:none}
+@media(min-width:480px){.logo-sub{display:flex;align-items:center;gap:5px}}
+.topbar-right{display:flex;align-items:center;gap:8px}
+.icon-btn{width:36px;height:36px;border-radius:9px;border:0.5px solid var(--border2);background:var(--bg2);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text2);transition:background .15s}
+.icon-btn:hover{background:var(--bg3);color:var(--text)}
+.icon-btn svg{width:18px;height:18px}
+
+/* ── TABS ── */
+.tabs-wrap{background:var(--bg);border-bottom:0.5px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch;display:flex;scrollbar-width:none}
+.tabs-wrap::-webkit-scrollbar{display:none}
+@media(max-width:699px){.tabs-wrap{display:none}}
+.tab{padding:0 14px;height:44px;font-size:13px;white-space:nowrap;background:none;border:none;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;font-family:inherit;font-weight:500;flex-shrink:0;transition:color .15s}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* ── CONTENT ── */
+.content{padding:1rem}
+.sec{display:none}.sec.active{display:block}
+
+/* ── METRICS ── */
+.metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:10px}
+@media(min-width:600px){.metrics{grid-template-columns:repeat(4,1fr)}}
+.metric{background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius);padding:12px 14px;box-shadow:var(--shadow)}
+.mlabel{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.mval{font-size:18px;font-weight:700;color:var(--text);line-height:1.2}
+@media(min-width:600px){.mval{font-size:20px}}
+.mval.green{color:var(--green-tx)}.mval.red{color:var(--red-tx)}.mval.blue{color:var(--blue-tx)}.mval.amber{color:var(--amber-tx)}
+.slabel{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin:1.25rem 0 .6rem}
+
+/* ── CHARTS ── */
+.chart-grid{display:grid;grid-template-columns:1fr;gap:1rem;margin-top:.5rem}
+@media(min-width:600px){.chart-grid{grid-template-columns:1fr 1fr}}
+.chart-card{background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:14px;box-shadow:var(--shadow)}
+.chart-title{font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px}
+.chart-wrap{position:relative;width:100%;height:180px}
+.chart-wrap-lg{position:relative;width:100%;height:200px}
+.legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px}
+.legend span{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text2)}
+.legend i{width:10px;height:10px;border-radius:2px;display:inline-block;flex-shrink:0}
+
+/* ── FORMS ── */
+.form-card{background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:14px;margin-bottom:1rem;box-shadow:var(--shadow)}
+.frow{display:grid;grid-template-columns:1fr;gap:10px}
+@media(min-width:480px){.frow{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:700px){.frow{grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}}
+.frow .full{grid-column:1/-1}
+label{display:block;font-size:11px;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+input,select{width:100%;padding:9px 12px;font-size:14px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-family:inherit;outline:none;-webkit-appearance:none;appearance:none;transition:border-color .15s,box-shadow .15s}
+input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(29,158,117,.18)}
+.item-row{display:flex;gap:6px}
+.item-row select{flex:1;min-width:0}
+.item-row input{flex:1;min-width:0;display:none}
+.hint{font-size:11px;color:var(--text3);margin-top:4px}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}
+
+/* ── BUTTONS ── */
+.btn{padding:9px 18px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg2);cursor:pointer;font-size:14px;font-weight:600;color:var(--text);font-family:inherit;white-space:nowrap;transition:background .15s,transform .1s;touch-action:manipulation}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn-primary:hover{background:var(--accent2)}
+.btn-sm{padding:6px 12px;font-size:12px}
+.btn-export{color:var(--blue-tx);border-color:rgba(55,138,221,.35)}
+.btn-danger-outline{color:var(--red-tx);border-color:rgba(226,75,74,.35)}
+
+/* ── TABLES ── */
+.tbl-wrap{background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-top:1rem;box-shadow:var(--shadow)}
+.tbl-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:400px}
+th{background:var(--bg2);padding:9px 12px;text-align:left;font-weight:600;font-size:11px;color:var(--text2);border-bottom:0.5px solid var(--border);text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+td{padding:9px 12px;border-bottom:0.5px solid var(--border);color:var(--text);vertical-align:middle;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--bg2)}
+.del-btn{width:28px;height:28px;border-radius:7px;border:none;background:transparent;cursor:pointer;color:var(--text3);display:inline-flex;align-items:center;justify-content:center;transition:background .15s,color .15s;flex-shrink:0;touch-action:manipulation}
+.del-btn:hover{background:var(--red-bg);color:var(--red-tx)}
+.del-btn svg{width:14px;height:14px;pointer-events:none}
+
+/* ── BADGES ── */
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+.b-sale{background:var(--green-bg);color:var(--green-tx)}
+.b-exp{background:var(--red-bg);color:var(--red-tx)}
+.b-del{background:var(--bg3);color:var(--text3)}
+.b-inv{background:var(--blue-bg);color:var(--blue-tx)}
+.b-low{background:var(--red-bg);color:var(--red-tx)}
+.b-ok{background:var(--green-bg);color:var(--green-tx)}
+.b-gain{background:var(--amber-bg);color:var(--amber-tx)}
+.b-log{background:var(--bg2);color:var(--text2)}
+.company-tag{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;background:var(--bg2);color:var(--text2)}
+.notice{background:var(--bg2);border-radius:var(--radius);padding:10px 14px;font-size:12px;color:var(--text2);margin-bottom:1rem;border:0.5px solid var(--border);line-height:1.5}
+.empty{text-align:center;padding:2rem;color:var(--text3);font-size:13px}
+.filter-row{display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;margin-bottom:1rem;align-items:center}
+.filter-row select{width:auto;flex:1;min-width:120px;max-width:200px;font-size:13px}
+
+/* ── LOADING OVERLAY ── */
+.loading-overlay{position:fixed;inset:0;background:var(--bg3);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;gap:14px;transition:opacity .3s}
+.loading-overlay.hidden{opacity:0;pointer-events:none}
+.spinner{width:36px;height:36px;border:3px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{font-size:14px;color:var(--text2)}
+
+/* ── BOTTOM NAV ── */
+.bottom-nav{display:flex;position:fixed;bottom:0;left:0;right:0;background:var(--bg);border-top:0.5px solid var(--border);height:56px;z-index:200;box-shadow:0 -2px 10px rgba(0,0,0,.07)}
+@media(min-width:700px){.bottom-nav{display:none}}
+.bnav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:none;border:none;cursor:pointer;color:var(--text3);font-family:inherit;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;transition:color .15s;touch-action:manipulation}
+.bnav-btn.active{color:var(--accent)}
+.bnav-btn svg{width:20px;height:20px}
+</style>
+</head>
+<body>
+
+<!-- LOADING OVERLAY -->
+<div class="loading-overlay" id="loading-overlay">
+  <div class="logo-mark" style="width:48px;height:48px;border-radius:12px;background:#1D9E75;display:flex;align-items:center;justify-content:center">
+    <svg viewBox="0 0 22 22" fill="none" width="28" height="28">
+      <path d="M11 2C7.5 2 4.5 4.5 4.5 8.5c0 2.5 1.2 4.5 3 5.8l.8 2.7h5.4l.8-2.7c1.8-1.3 3-3.3 3-5.8C17.5 4.5 14.5 2 11 2z" fill="rgba(255,255,255,.22)" stroke="white" stroke-width="1.4" stroke-linejoin="round"/>
+      <path d="M8 17h6M8.8 19h4.4" stroke="white" stroke-width="1.4" stroke-linecap="round"/>
+      <path d="M11 5.5v3M9.5 7h3" stroke="white" stroke-width="1.4" stroke-linecap="round"/>
+    </svg>
+  </div>
+  <div class="spinner"></div>
+  <div class="loading-text">Connecting to database...</div>
+</div>
+
+<div class="shell">
+
+<!-- FIREBASE CONFIG BANNER -->
+<div class="config-banner" id="config-banner">
+  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+    <circle cx="10" cy="10" r="8"/><path d="M10 6v4M10 14h.01"/>
+  </svg>
+  <p>Firebase is not configured yet. <a onclick="document.getElementById('config-modal').style.display='flex'">Click here to enter your Firebase config</a> — takes 2 minutes. See the setup guide for help.</p>
+</div>
+
+<!-- FIREBASE CONFIG MODAL -->
+<div id="config-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:center;justify-content:center;padding:1rem">
+  <div style="background:var(--card);border-radius:var(--radius-lg);padding:1.5rem;width:100%;max-width:520px;box-shadow:0 8px 32px rgba(0,0,0,.2)">
+    <div style="font-size:16px;font-weight:700;margin-bottom:.5rem;color:var(--text)">Enter your Firebase config</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:1rem;line-height:1.5">Paste the values from your Firebase project settings. These are safe to put in the app — they only allow access based on your security rules.</div>
+    <div style="display:grid;gap:10px">
+      <div><label>API Key</label><input type="text" id="cfg-apiKey" placeholder="AIzaSy..."></div>
+      <div><label>Auth Domain</label><input type="text" id="cfg-authDomain" placeholder="your-app.firebaseapp.com"></div>
+      <div><label>Database URL</label><input type="text" id="cfg-databaseURL" placeholder="https://your-app-default-rtdb.firebaseio.com"></div>
+      <div><label>Project ID</label><input type="text" id="cfg-projectId" placeholder="your-app-id"></div>
+      <div><label>Storage Bucket</label><input type="text" id="cfg-storageBucket" placeholder="your-app.appspot.com"></div>
+      <div><label>Messaging Sender ID</label><input type="text" id="cfg-messagingSenderId" placeholder="123456789"></div>
+      <div><label>App ID</label><input type="text" id="cfg-appId" placeholder="1:123:web:abc..."></div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:1rem;justify-content:flex-end">
+      <button class="btn btn-sm" onclick="document.getElementById('config-modal').style.display='none'">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="saveConfig()">Save & Connect</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-mark">
+      <svg viewBox="0 0 22 22" fill="none">
+        <path d="M11 2C7.5 2 4.5 4.5 4.5 8.5c0 2.5 1.2 4.5 3 5.8l.8 2.7h5.4l.8-2.7c1.8-1.3 3-3.3 3-5.8C17.5 4.5 14.5 2 11 2z" fill="rgba(255,255,255,.22)" stroke="white" stroke-width="1.4" stroke-linejoin="round"/>
+        <path d="M8 17h6M8.8 19h4.4" stroke="white" stroke-width="1.4" stroke-linecap="round"/>
+        <path d="M11 5.5v3M9.5 7h3" stroke="white" stroke-width="1.4" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div>
+      <div class="logo-name">FoodTrack Pro</div>
+      <div class="logo-sub">
+        <div class="sync-dot" id="sync-dot"></div>
+        <span class="sync-label" id="sync-label">Connecting...</span>
+      </div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <button class="icon-btn" onclick="exportCSV()" title="Export to CSV">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10 3v10M6 9l4 4 4-4"/><path d="M4 15h12"/>
+      </svg>
+    </button>
+    <button class="icon-btn" onclick="toggleTheme()" title="Toggle theme">
+      <svg id="icon-sun" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+        <circle cx="10" cy="10" r="4"/><path d="M10 2v2M10 16v2M2 10h2M16 10h2M4.22 4.22l1.42 1.42M14.36 14.36l1.42 1.42M4.22 15.78l1.42-1.42M14.36 5.64l1.42-1.42"/>
+      </svg>
+      <svg id="icon-moon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" style="display:none">
+        <path d="M17 13A7 7 0 0 1 7 3a7 7 0 1 0 10 10z"/>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<!-- DESKTOP TABS -->
+<div class="tabs-wrap">
+  <button class="tab active" onclick="showTab('dashboard',0)">Dashboard</button>
+  <button class="tab" onclick="showTab('sales',1)">Record sale</button>
+  <button class="tab" onclick="showTab('expenses',2)">Record expense</button>
+  <button class="tab" onclick="showTab('inventory',3)">Inventory</button>
+  <button class="tab" onclick="showTab('log',4)">Full log</button>
+</div>
+
+<div class="content">
+
+  <!-- DASHBOARD -->
+  <div id="tab-dashboard" class="sec active">
+    <div class="metrics">
+      <div class="metric"><div class="mlabel">Total sales</div><div class="mval green" id="d-sales">₦0</div></div>
+      <div class="metric"><div class="mlabel">Total expenses</div><div class="mval red" id="d-exp">₦0</div></div>
+      <div class="metric"><div class="mlabel">Net profit</div><div class="mval" id="d-profit">₦0</div></div>
+      <div class="metric"><div class="mlabel">Gross gain</div><div class="mval amber" id="d-gain">₦0</div></div>
+    </div>
+    <div class="metrics">
+      <div class="metric"><div class="mlabel">Companies</div><div class="mval blue" id="d-companies">0</div></div>
+      <div class="metric"><div class="mlabel">Units sold</div><div class="mval" id="d-units">0</div></div>
+      <div class="metric"><div class="mlabel">Transactions</div><div class="mval" id="d-records">0</div></div>
+      <div class="metric"><div class="mlabel">Stock alerts</div><div class="mval red" id="d-alerts">0</div></div>
+    </div>
+    <div class="slabel">Sales over time</div>
+    <div class="chart-card"><div class="chart-wrap-lg"><canvas id="chartTime"></canvas></div></div>
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="chart-title">Top selling items</div>
+        <div class="chart-wrap"><canvas id="chartItems"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Sales vs expenses vs gain</div>
+        <div class="legend">
+          <span><i style="background:#5DCAA5"></i>Sales</span>
+          <span><i style="background:#F09595"></i>Expenses</span>
+          <span><i style="background:#EF9F27"></i>Gain</span>
+        </div>
+        <div class="chart-wrap"><canvas id="chartPnL"></canvas></div>
+      </div>
+    </div>
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="chart-title">Gross gain by item</div>
+        <div class="chart-wrap"><canvas id="chartGain"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Sales by company</div>
+        <div class="chart-wrap"><canvas id="chartContrib"></canvas></div>
+      </div>
+    </div>
+    <div class="slabel">Company breakdown</div>
+    <div class="tbl-wrap">
+      <div class="tbl-scroll">
+        <table style="min-width:480px">
+          <thead><tr><th>Company</th><th>Sales</th><th>Expenses</th><th>Gross gain</th><th>Net profit</th><th>Share</th></tr></thead>
+          <tbody id="company-contrib"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- RECORD SALE -->
+  <div id="tab-sales" class="sec">
+    <div class="notice">Enter your company name for each sale. Choose a preset item or select "Custom item" to add anything new.</div>
+    <div class="form-card">
+      <div class="frow">
+        <div><label>Company name</label><input type="text" id="s-company" placeholder="e.g. Ade Ventures" autocomplete="off"></div>
+        <div>
+          <label>Item</label>
+          <div class="item-row">
+            <select id="s-item" onchange="toggleCustom('s')"></select>
+            <input type="text" id="s-custom" placeholder="Type item name...">
+          </div>
+          <div class="hint" id="s-hint"></div>
+        </div>
+        <div><label>Qty sold</label><input type="number" id="s-qty" min="1" value="1" step="1" inputmode="numeric"></div>
+        <div><label>Unit price (₦)</label><input type="number" id="s-price" min="0" placeholder="0" inputmode="numeric"></div>
+        <div class="full btn-row"><button class="btn btn-primary" onclick="addSale()">+ Record sale</button></div>
+      </div>
+    </div>
+    <div class="tbl-wrap">
+      <div class="tbl-scroll">
+        <table>
+          <thead><tr><th>Time</th><th>Company</th><th>Item</th><th>Qty</th><th>Unit (₦)</th><th>Total (₦)</th><th>Gain (₦)</th><th></th></tr></thead>
+          <tbody id="s-log"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- RECORD EXPENSE -->
+  <div id="tab-expenses" class="sec">
+    <div class="notice">Log all costs with your company name so per-company expenses are tracked in the dashboard.</div>
+    <div class="form-card">
+      <div class="frow">
+        <div><label>Company name</label><input type="text" id="e-company" placeholder="e.g. Ade Ventures" autocomplete="off"></div>
+        <div><label>Description</label><input type="text" id="e-desc" placeholder="e.g. Transport to Bodija"></div>
+        <div><label>Category</label>
+          <select id="e-cat">
+            <option>Restocking</option><option>Transport</option><option>Market levy</option>
+            <option>Storage</option><option>Labour</option><option>Other</option>
+          </select>
+        </div>
+        <div><label>Amount (₦)</label><input type="number" id="e-amount" min="0" placeholder="0" inputmode="numeric"></div>
+        <div class="full btn-row"><button class="btn btn-primary" onclick="addExpense()">+ Record expense</button></div>
+      </div>
+    </div>
+    <div class="tbl-wrap">
+      <div class="tbl-scroll">
+        <table>
+          <thead><tr><th>Time</th><th>Company</th><th>Description</th><th>Category</th><th>Amount (₦)</th><th></th></tr></thead>
+          <tbody id="e-log"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- INVENTORY -->
+  <div id="tab-inventory" class="sec">
+    <div class="notice"><strong>Gain price</strong> = your markup per unit sold — profit above cost price. This calculates gross gain across all sales automatically.</div>
+    <div class="form-card">
+      <div class="frow">
+        <div>
+          <label>Item</label>
+          <div class="item-row">
+            <select id="i-item" onchange="toggleCustom('i')"></select>
+            <input type="text" id="i-custom" placeholder="Type item name...">
+          </div>
+        </div>
+        <div><label>Qty in stock</label><input type="number" id="i-qty" min="0" placeholder="0" step="1" inputmode="numeric"></div>
+        <div><label>Cost price / unit (₦)</label><input type="number" id="i-cost" min="0" placeholder="0" inputmode="numeric"></div>
+        <div>
+          <label>Gain price / unit (₦)</label>
+          <input type="number" id="i-gain" min="0" placeholder="0" inputmode="numeric">
+          <div class="hint">Your markup per unit sold</div>
+        </div>
+        <div><label>Low stock alert at</label><input type="number" id="i-alert" min="0" value="5" step="1" inputmode="numeric"></div>
+        <div class="full btn-row"><button class="btn btn-primary" onclick="updateStock()">Update stock</button></div>
+      </div>
+    </div>
+    <div class="tbl-wrap">
+      <div class="tbl-scroll">
+        <table style="min-width:560px">
+          <thead><tr><th>Item</th><th>In stock</th><th>Cost/unit</th><th>Gain/unit</th><th>Alert at</th><th>Status</th><th></th></tr></thead>
+          <tbody id="i-log"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- FULL LOG -->
+  <div id="tab-log" class="sec">
+    <div class="notice">Complete audit trail — all entries including deleted ones are permanently stored in Firebase and never lost.</div>
+    <div class="filter-row">
+      <select id="log-filter" onchange="renderLog()">
+        <option value="all">All entries</option>
+        <option value="sale">Sales</option>
+        <option value="expense">Expenses</option>
+        <option value="inventory">Inventory updates</option>
+        <option value="deleted">Deleted records</option>
+      </select>
+      <select id="log-company" onchange="renderLog()">
+        <option value="all">All companies</option>
+      </select>
+      <button class="btn btn-sm btn-export" onclick="exportCSV()">Export CSV</button>
+    </div>
+    <div class="tbl-wrap">
+      <div class="tbl-scroll">
+        <table style="min-width:500px">
+          <thead><tr><th>Date/time</th><th>Company</th><th>Type</th><th>Description</th><th>Qty</th><th>Amount (₦)</th></tr></thead>
+          <tbody id="full-log"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- BOTTOM NAV -->
+<div class="bottom-nav">
+  <button class="bnav-btn active" onclick="showTab('dashboard',0)">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="2" y="2" width="7" height="7" rx="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5"/>
+      <rect x="2" y="11" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/>
+    </svg>Dash
+  </button>
+  <button class="bnav-btn" onclick="showTab('sales',1)">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M10 4v12M4 10h12"/></svg>Sale
+  </button>
+  <button class="bnav-btn" onclick="showTab('expenses',2)">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 6h14M3 10h8M3 14h5"/><circle cx="15" cy="13" r="3"/>
+    </svg>Expense
+  </button>
+  <button class="bnav-btn" onclick="showTab('inventory',3)">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M2 7l8-4 8 4v6l-8 4-8-4V7z"/><path d="M10 3v14M2 7l8 4 8-4"/>
+    </svg>Stock
+  </button>
+  <button class="bnav-btn" onclick="showTab('log',4)">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+      <path d="M4 4h12M4 8h12M4 12h8M4 16h6"/>
+    </svg>Log
+  </button>
+</div>
+
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import { getDatabase, ref, push, onValue, update, remove, set } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+
+/* ════════════════════════════════════════════════
+   STEP 1: PASTE YOUR FIREBASE CONFIG HERE
+   Replace EVERY value below with your own.
+   Get these from: Firebase Console → Project Settings → Your Apps
+   ════════════════════════════════════════════════ */
+const FIREBASE_CONFIG = {
+  apiKey:            "PASTE_YOUR_API_KEY_HERE",
+  authDomain:        "PASTE_YOUR_AUTH_DOMAIN_HERE",
+  databaseURL:       "PASTE_YOUR_DATABASE_URL_HERE",
+  projectId:         "PASTE_YOUR_PROJECT_ID_HERE",
+  storageBucket:     "PASTE_YOUR_STORAGE_BUCKET_HERE",
+  messagingSenderId: "PASTE_YOUR_MESSAGING_SENDER_ID_HERE",
+  appId:             "PASTE_YOUR_APP_ID_HERE"
+};
+/* ════════════════════════════════════════════════ */
+
+window._firebaseReady = false;
+window._fbDB = null;
+window._fbRef = null;
+window._fbAudit = null;
+window._fbInventory = null;
+
+function isConfigured(cfg) {
+  return cfg.apiKey && !cfg.apiKey.startsWith('PASTE');
+}
+
+// Try saved config from localStorage first
+function getConfig() {
+  try {
+    const saved = localStorage.getItem('fst_firebase_cfg');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (isConfigured(parsed)) return parsed;
+    }
+  } catch(e) {}
+  return FIREBASE_CONFIG;
+}
+
+window.saveConfig = function() {
+  const cfg = {
+    apiKey:            document.getElementById('cfg-apiKey').value.trim(),
+    authDomain:        document.getElementById('cfg-authDomain').value.trim(),
+    databaseURL:       document.getElementById('cfg-databaseURL').value.trim(),
+    projectId:         document.getElementById('cfg-projectId').value.trim(),
+    storageBucket:     document.getElementById('cfg-storageBucket').value.trim(),
+    messagingSenderId: document.getElementById('cfg-messagingSenderId').value.trim(),
+    appId:             document.getElementById('cfg-appId').value.trim()
+  };
+  if (!cfg.apiKey || !cfg.databaseURL) { alert('Please fill in at least API Key and Database URL.'); return; }
+  localStorage.setItem('fst_firebase_cfg', JSON.stringify(cfg));
+  document.getElementById('config-modal').style.display = 'none';
+  location.reload();
+};
+
+const config = getConfig();
+
+if (!isConfigured(config)) {
+  document.getElementById('loading-overlay').classList.add('hidden');
+  document.getElementById('config-banner').classList.remove('hidden');
+  setSyncStatus('error', 'Not connected');
+  initLocalFallback();
+} else {
+  document.getElementById('config-banner').classList.add('hidden');
+  connectFirebase(config);
+}
+
+async function connectFirebase(cfg) {
+  try {
+    setSyncStatus('syncing', 'Connecting...');
+    const app = initializeApp(cfg);
+    const db = getDatabase(app);
+    window._fbDB = db;
+
+    // Listen to sales
+    window._fbRef = ref(db, 'sales');
+    window._fbAudit = ref(db, 'auditLog');
+    window._fbInventory = ref(db, 'inventory');
+
+    let loaded = 0;
+    const checkLoaded = () => { loaded++; if (loaded >= 3) { document.getElementById('loading-overlay').classList.add('hidden'); setSyncStatus('live', 'Live — all synced'); } };
+
+    onValue(ref(db, 'sales'), snap => {
+      window._db_sales = snap.val() ? Object.entries(snap.val()).map(([id,v]) => ({id,...v})) : [];
+      renderSales(); updateDashboard(); checkLoaded();
+    });
+    onValue(ref(db, 'expenses'), snap => {
+      window._db_expenses = snap.val() ? Object.entries(snap.val()).map(([id,v]) => ({id,...v})) : [];
+      renderExpenses(); updateDashboard(); checkLoaded();
+    });
+    onValue(ref(db, 'inventory'), snap => {
+      window._db_inventory = snap.val() || {};
+      renderInventory(); updateDashboard(); checkLoaded();
+    });
+    onValue(ref(db, 'auditLog'), snap => {
+      window._db_audit = snap.val() ? Object.entries(snap.val()).map(([id,v]) => ({id,...v})) : [];
+      renderLog();
+    });
+
+    window._firebaseReady = true;
+  } catch(err) {
+    console.error('Firebase error:', err);
+    document.getElementById('loading-overlay').classList.add('hidden');
+    setSyncStatus('error', 'Connection failed');
+    document.getElementById('config-banner').classList.remove('hidden');
+    document.getElementById('config-banner').querySelector('p').innerHTML =
+      'Firebase connection failed: ' + err.message + '. <a onclick="document.getElementById(\'config-modal\').style.display=\'flex\'">Update config</a>';
+    initLocalFallback();
+  }
+}
+
+function initLocalFallback() {
+  // Fall back to localStorage if Firebase not configured
+  try {
+    const raw = localStorage.getItem('fst_v3');
+    if (raw) {
+      const d = JSON.parse(raw);
+      window._db_sales = d.sales || [];
+      window._db_expenses = d.expenses || [];
+      window._db_inventory = d.inventory || {};
+      window._db_audit = d.auditLog || [];
+    } else {
+      window._db_sales = []; window._db_expenses = []; window._db_inventory = {}; window._db_audit = [];
+    }
+  } catch(e) { window._db_sales=[]; window._db_expenses=[]; window._db_inventory={}; window._db_audit=[]; }
+  renderAll(); updateDashboard();
+  setSyncStatus('error', 'Local only — not shared');
+}
+
+// Expose Firebase write functions to global scope
+window._pushSale = async (data) => {
+  if (!window._firebaseReady || !window._fbDB) { localSave('sale', data); return; }
+  setSyncStatus('syncing','Saving...');
+  await push(ref(window._fbDB, 'sales'), data);
+  setSyncStatus('live','Live — all synced');
+};
+window._updateSale = async (id, data) => {
+  if (!window._firebaseReady) return;
+  await update(ref(window._fbDB, 'sales/'+id), data);
+};
+window._pushExpense = async (data) => {
+  if (!window._firebaseReady) { localSave('expense', data); return; }
+  setSyncStatus('syncing','Saving...');
+  await push(ref(window._fbDB, 'expenses'), data);
+  setSyncStatus('live','Live — all synced');
+};
+window._updateExpense = async (id, data) => {
+  if (!window._firebaseReady) return;
+  await update(ref(window._fbDB, 'expenses/'+id), data);
+};
+window._setInventory = async (item, data) => {
+  if (!window._firebaseReady) { window._db_inventory[item]=data; return; }
+  setSyncStatus('syncing','Saving...');
+  await set(ref(window._fbDB, 'inventory/'+encodeKey(item)), data);
+  setSyncStatus('live','Live — all synced');
+};
+window._deleteInventory = async (item) => {
+  if (!window._firebaseReady) { delete window._db_inventory[item]; return; }
+  await remove(ref(window._fbDB, 'inventory/'+encodeKey(item)));
+};
+window._pushAudit = async (data) => {
+  if (!window._firebaseReady) return;
+  await push(ref(window._fbDB, 'auditLog'), data);
+};
+
+function encodeKey(str) { return str.replace(/[.#$[\]/]/g,'_'); }
+
+function localSave(type, data) {
+  if (type==='sale') { window._db_sales.push(data); }
+  if (type==='expense') { window._db_expenses.push(data); }
+  renderAll();
+}
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+/* ── GLOBALS ── */
+window._db_sales = window._db_sales || [];
+window._db_expenses = window._db_expenses || [];
+window._db_inventory = window._db_inventory || {};
+window._db_audit = window._db_audit || [];
+let charts = {};
+let activeTab = 0;
+
+const ITEMS = [
+  'Rice (bag)','Beans (mudu)','Garri (bag)','Yam (tuber)','Tomatoes (basket)',
+  'Palm oil (litre)','Onions (bag)','Pepper (heap)','Maize (bag)','Cassava (kg)',
+  'Groundnut (bag)','Egusi (paint bucket)','Crayfish (mudu)','Stockfish (piece)',
+  'Semovita (bag)','Plantain (bunch)','Sweet potato (bag)','Ginger (kg)',
+  'Turmeric (kg)','Vegetable (bunch)','Melon (mudu)','Dried fish (basket)',
+  'Coconut (piece)','Locust beans (mudu)','Soya beans (bag)','-- Custom item --'
+];
+
+/* ── INIT ── */
+document.addEventListener('DOMContentLoaded', () => {
+  populateSelects(); applyTheme();
+});
+
+/* ── SYNC STATUS ── */
+function setSyncStatus(state, label) {
+  const dot = document.getElementById('sync-dot');
+  const lbl = document.getElementById('sync-label');
+  if (dot) { dot.className = 'sync-dot ' + state; }
+  if (lbl) lbl.textContent = label;
+}
+
+/* ── THEME ── */
+function applyTheme() {
+  const t = localStorage.getItem('fst_theme') || 'light';
+  document.documentElement.setAttribute('data-theme', t);
+  document.getElementById('icon-sun').style.display  = t==='dark'?'none':'block';
+  document.getElementById('icon-moon').style.display = t==='dark'?'block':'none';
+}
+function toggleTheme() {
+  const cur = document.documentElement.getAttribute('data-theme');
+  const next = cur==='dark'?'light':'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('fst_theme', next);
+  document.getElementById('icon-sun').style.display  = next==='dark'?'none':'block';
+  document.getElementById('icon-moon').style.display = next==='dark'?'block':'none';
+  setTimeout(()=>updateDashboard(),60);
+}
+
+/* ── TABS ── */
+function showTab(name, idx) {
+  document.querySelectorAll('.sec').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.bnav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  const tabs=document.querySelectorAll('.tab'); if(tabs[idx])tabs[idx].classList.add('active');
+  const btns=document.querySelectorAll('.bnav-btn'); if(btns[idx])btns[idx].classList.add('active');
+  activeTab=idx;
+  if(name==='dashboard')updateDashboard();
+  if(name==='log')renderLog();
+}
+
+/* ── SELECTS ── */
+function populateSelects() {
+  ['s-item','i-item'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el)el.innerHTML=ITEMS.map(i=>`<option value="${i}">${i}</option>`).join('');
+  });
+}
+function toggleCustom(p) {
+  const s=document.getElementById(p+'-item'), i=document.getElementById(p+'-custom');
+  const isC=s.value==='-- Custom item --';
+  i.style.display=isC?'block':'none';
+  if(p==='s'){const h=document.getElementById('s-hint');if(h)h.textContent=isC?'New item will appear in all records.':'';}
+}
+function getItem(p) {
+  const v=document.getElementById(p+'-item').value;
+  if(v==='-- Custom item --')return(document.getElementById(p+'-custom').value||'').trim();
+  return v;
+}
+
+/* ── HELPERS ── */
+function ts(){return new Date().toLocaleString('en-NG',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});}
+function fmt(n){return '₦'+Math.round(n).toLocaleString('en-NG');}
+function gid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+function calcGain(item,qty){
+  const inv=window._db_inventory[item]||window._db_inventory[item.replace(/[.#$[\]/]/g,'_')];
+  if(!inv||!inv.gainPerUnit)return 0;
+  return inv.gainPerUnit*qty;
+}
+const trashSVG=`<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h12"/><path d="M5 4V2.5h6V4"/><path d="M6 7v5M10 7v5"/><path d="M3 4l1 9h8l1-9"/></svg>`;
+
+/* ── ADD SALE ── */
+async function addSale() {
+  const company=document.getElementById('s-company').value.trim();
+  const item=getItem('s');
+  const qty=parseFloat(document.getElementById('s-qty').value)||0;
+  const price=parseFloat(document.getElementById('s-price').value)||0;
+  if(!company){alert('Please enter your company name.');return;}
+  if(!item){alert('Please enter or select an item.');return;}
+  if(!qty||!price){alert('Please enter quantity and unit price.');return;}
+  const gain=calcGain(item,qty);
+  const data={id:gid(),ts:ts(),company,item,qty,price,total:qty*price,gain,deleted:false};
+  await window._pushSale(data);
+
+  // Update inventory stock
+  const invKey=item.replace(/[.#$[\]/]/g,'_');
+  const inv=window._db_inventory[item]||window._db_inventory[invKey];
+  if(inv){await window._setInventory(item,{...inv,qty:Math.max(0,inv.qty-qty)});}
+
+  await window._pushAudit({id:gid(),ts:ts(),type:'sale',label:item,company,qty,amount:qty*price,note:''});
+  document.getElementById('s-qty').value=1;
+  document.getElementById('s-price').value='';
+  document.getElementById('s-custom').value='';
+}
+
+/* ── DELETE SALE ── */
+async function deleteSale(id) {
+  if(!confirm('Delete this sale? It will remain in the Full Log as a deleted record.'))return;
+  const e=window._db_sales.find(s=>s.id===id);if(!e)return;
+  await window._updateSale(id,{...e,deleted:true});
+  const inv=window._db_inventory[e.item];
+  if(inv)await window._setInventory(e.item,{...inv,qty:(inv.qty||0)+e.qty});
+  await window._pushAudit({id:gid(),ts:ts(),type:'deleted',label:'SALE DELETED: '+e.item,company:e.company,qty:e.qty,amount:e.total,note:'Removed by user'});
+}
+
+/* ── ADD EXPENSE ── */
+async function addExpense() {
+  const company=document.getElementById('e-company').value.trim();
+  const desc=document.getElementById('e-desc').value.trim()||'Expense';
+  const cat=document.getElementById('e-cat').value;
+  const amount=parseFloat(document.getElementById('e-amount').value)||0;
+  if(!company){alert('Please enter your company name.');return;}
+  if(!amount){alert('Please enter an amount.');return;}
+  await window._pushExpense({id:gid(),ts:ts(),company,desc,cat,amount,deleted:false});
+  await window._pushAudit({id:gid(),ts:ts(),type:'expense',label:desc+' ('+cat+')',company,qty:'-',amount,note:''});
+  document.getElementById('e-desc').value='';
+  document.getElementById('e-amount').value='';
+}
+
+/* ── DELETE EXPENSE ── */
+async function deleteExpense(id) {
+  if(!confirm('Delete this expense? It will remain in the Full Log.'))return;
+  const e=window._db_expenses.find(x=>x.id===id);if(!e)return;
+  await window._updateExpense(id,{...e,deleted:true});
+  await window._pushAudit({id:gid(),ts:ts(),type:'deleted',label:'EXPENSE DELETED: '+e.desc,company:e.company,qty:'-',amount:e.amount,note:'Removed by user'});
+}
+
+/* ── UPDATE STOCK ── */
+async function updateStock() {
+  const item=getItem('i');
+  const qty=parseFloat(document.getElementById('i-qty').value);
+  const cost=parseFloat(document.getElementById('i-cost').value)||0;
+  const gain=parseFloat(document.getElementById('i-gain').value)||0;
+  const alertVal=parseFloat(document.getElementById('i-alert').value)||5;
+  if(!item){alert('Please enter or select an item.');return;}
+  if(isNaN(qty)){alert('Enter a quantity.');return;}
+  await window._setInventory(item,{qty,costPerUnit:cost,gainPerUnit:gain,alert:alertVal});
+  await window._pushAudit({id:gid(),ts:ts(),type:'inventory',label:item,company:'',qty,amount:cost*qty,note:'gain/unit: ₦'+gain});
+  document.getElementById('i-qty').value='';
+  document.getElementById('i-cost').value='';
+  document.getElementById('i-gain').value='';
+  document.getElementById('i-custom').value='';
+}
+
+/* ── DELETE INVENTORY ── */
+async function deleteInventory(item) {
+  if(!confirm('Remove "'+item+'" from inventory?'))return;
+  await window._pushAudit({id:gid(),ts:ts(),type:'deleted',label:'STOCK DELETED: '+item,company:'',qty:0,amount:0,note:'Inventory removed'});
+  await window._deleteInventory(item);
+}
+
+/* ── RENDERS ── */
+function renderSales() {
+  const tb=document.getElementById('s-log');
+  const active=(window._db_sales||[]).filter(s=>!s.deleted);
+  if(!active.length){tb.innerHTML='<tr><td colspan="8" class="empty">No sales recorded yet</td></tr>';return;}
+  tb.innerHTML=active.slice().reverse().map(s=>
+    `<tr><td>${s.ts}</td><td>${s.company}</td><td title="${s.item}">${s.item}</td><td>${s.qty}</td><td>${fmt(s.price)}</td><td>${fmt(s.total)}</td>
+     <td>${s.gain>0?'<span class="badge b-gain">'+fmt(s.gain)+'</span>':'-'}</td>
+     <td><button class="del-btn" onclick="deleteSale('${s.id}')">${trashSVG}</button></td></tr>`
+  ).join('');
+}
+
+function renderExpenses() {
+  const tb=document.getElementById('e-log');
+  const active=(window._db_expenses||[]).filter(e=>!e.deleted);
+  if(!active.length){tb.innerHTML='<tr><td colspan="6" class="empty">No expenses recorded yet</td></tr>';return;}
+  tb.innerHTML=active.slice().reverse().map(e=>
+    `<tr><td>${e.ts}</td><td>${e.company}</td><td title="${e.desc}">${e.desc}</td><td><span class="badge b-exp">${e.cat}</span></td><td>${fmt(e.amount)}</td>
+     <td><button class="del-btn" onclick="deleteExpense('${e.id}')">${trashSVG}</button></td></tr>`
+  ).join('');
+}
+
+function renderInventory() {
+  const tb=document.getElementById('i-log');
+  const inv=window._db_inventory||{};
+  const keys=Object.keys(inv);
+  if(!keys.length){tb.innerHTML='<tr><td colspan="7" class="empty">No stock recorded yet</td></tr>';return;}
+  tb.innerHTML=keys.map(k=>{
+    const{qty,costPerUnit,gainPerUnit,alert}=inv[k];
+    const low=qty<=alert;
+    return`<tr><td title="${k}">${k}</td><td style="color:${low?'var(--red-tx)':'inherit'}">${qty}</td>
+      <td>${costPerUnit?fmt(costPerUnit):'-'}</td>
+      <td><span class="badge b-gain">${gainPerUnit?fmt(gainPerUnit):'Not set'}</span></td>
+      <td>${alert}</td><td><span class="badge ${low?'b-low':'b-ok'}">${low?'Low':'OK'}</span></td>
+      <td><button class="del-btn" onclick="deleteInventory('${k.replace(/'/g,"\\'")}'">${trashSVG}</button></td></tr>`;
+  }).join('');
+}
+
+function renderLog() {
+  const typeF=document.getElementById('log-filter').value;
+  const compF=document.getElementById('log-company').value;
+  const audit=window._db_audit||[];
+  const companies=[...new Set(audit.map(r=>r.company).filter(c=>c&&c!=='-'))];
+  const sel=document.getElementById('log-company');
+  const prev=sel.value;
+  sel.innerHTML='<option value="all">All companies</option>'+companies.map(c=>`<option value="${c}">${c}</option>`).join('');
+  if(companies.includes(prev))sel.value=prev;
+  let rows=[...audit];
+  if(typeF!=='all')rows=rows.filter(r=>r.type===typeF);
+  if(compF!=='all')rows=rows.filter(r=>r.company===compF);
+  const tb=document.getElementById('full-log');
+  if(!rows.length){tb.innerHTML='<tr><td colspan="6" class="empty">No records match</td></tr>';return;}
+  const cls={sale:'b-sale',expense:'b-exp',inventory:'b-inv',deleted:'b-del'};
+  tb.innerHTML=rows.slice().reverse().map(r=>
+    `<tr style="${r.type==='deleted'?'opacity:.6':''}">
+      <td>${r.ts}</td><td>${r.company&&r.company!=='-'?`<span class="company-tag">${r.company}</span>`:'-'}</td>
+      <td><span class="badge ${cls[r.type]||'b-log'}">${r.type}</span></td>
+      <td title="${r.label}">${r.label}${r.note?' <span style="color:var(--text3);font-size:11px">— '+r.note+'</span>':''}</td>
+      <td>${r.qty}</td>
+      <td style="color:${r.type==='sale'?'var(--green-tx)':r.type==='expense'?'var(--red-tx)':'var(--text2)'}">
+        ${r.type==='sale'?'+':r.type==='expense'?'-':''}${r.amount&&r.amount!=='-'?fmt(r.amount):'-'}
+      </td></tr>`
+  ).join('');
+}
+
+function renderAll(){renderSales();renderExpenses();renderInventory();}
+
+/* ── CHARTS ── */
+function dc(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
+function dark(){return document.documentElement.getAttribute('data-theme')==='dark';}
+function gc(){return dark()?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.07)';}
+function tc(){return dark()?'#7a7a76':'#8a8a86';}
+function yf(v){return '₦'+(v>=1000?(v/1000).toFixed(0)+'k':Math.round(v).toLocaleString());}
+
+function updateDashboard() {
+  const as=(window._db_sales||[]).filter(s=>!s.deleted);
+  const ae=(window._db_expenses||[]).filter(e=>!e.deleted);
+  const totS=as.reduce((a,s)=>a+s.total,0);
+  const totE=ae.reduce((a,e)=>a+e.amount,0);
+  const totG=as.reduce((a,s)=>a+(s.gain||0),0);
+  const profit=totS-totE;
+  const companies=new Set([...as.map(s=>s.company),...ae.map(e=>e.company)]);
+  const units=as.reduce((a,s)=>a+s.qty,0);
+  const alerts=Object.values(window._db_inventory||{}).filter(v=>v.qty<=v.alert).length;
+  document.getElementById('d-sales').textContent=fmt(totS);
+  document.getElementById('d-exp').textContent=fmt(totE);
+  document.getElementById('d-gain').textContent=fmt(totG);
+  document.getElementById('d-companies').textContent=companies.size;
+  document.getElementById('d-units').textContent=Math.round(units).toLocaleString();
+  document.getElementById('d-records').textContent=(as.length+ae.length).toString();
+  document.getElementById('d-alerts').textContent=alerts.toString();
+  const pe=document.getElementById('d-profit');
+  pe.textContent=fmt(profit);pe.className='mval '+(profit>=0?'green':'red');
+  buildContribTable(companies,as,ae);
+  buildTimeChart(as);buildItemsChart(as);buildPnLChart(as,ae);buildGainChart(as);buildContribChart(as,companies);
+}
+
+function buildTimeChart(sales){
+  dc('time');const bd={};
+  sales.forEach(s=>{const d=s.ts.split(',')[0];bd[d]=(bd[d]||0)+s.total;});
+  const labels=Object.keys(bd);if(!labels.length)return;
+  charts['time']=new Chart(document.getElementById('chartTime'),{type:'line',
+    data:{labels,datasets:[{data:labels.map(d=>bd[d]),borderColor:'#1D9E75',backgroundColor:'rgba(29,158,117,0.1)',tension:.35,fill:true,pointRadius:4,pointBackgroundColor:'#1D9E75',pointBorderColor:dark()?'#1e1e1b':'#fff',pointBorderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{grid:{display:false},ticks:{color:tc(),font:{size:11},maxRotation:30}},y:{grid:{color:gc()},ticks:{color:tc(),callback:yf,font:{size:11}}}}}});
+}
+function buildItemsChart(sales){
+  dc('items');const bi={};sales.forEach(s=>{bi[s.item]=(bi[s.item]||0)+s.total;});
+  const sorted=Object.entries(bi).sort((a,b)=>b[1]-a[1]).slice(0,6);if(!sorted.length)return;
+  charts['items']=new Chart(document.getElementById('chartItems'),{type:'bar',
+    data:{labels:sorted.map(e=>e[0]),datasets:[{data:sorted.map(e=>e[1]),backgroundColor:['#1D9E75','#378ADD','#D85A30','#BA7517','#D4537E','#639922'],borderRadius:6,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{grid:{display:false},ticks:{color:tc(),font:{size:10},maxRotation:35}},y:{grid:{color:gc()},ticks:{color:tc(),callback:yf,font:{size:10}}}}}});
+}
+function buildPnLChart(sales,expenses){
+  dc('pnl');const bd={};
+  sales.forEach(s=>{const d=s.ts.split(',')[0];if(!bd[d])bd[d]={s:0,e:0,g:0};bd[d].s+=s.total;bd[d].g+=(s.gain||0);});
+  expenses.forEach(e=>{const d=e.ts.split(',')[0];if(!bd[d])bd[d]={s:0,e:0,g:0};bd[d].e+=e.amount;});
+  const labels=Object.keys(bd).sort();if(!labels.length)return;
+  charts['pnl']=new Chart(document.getElementById('chartPnL'),{type:'bar',
+    data:{labels,datasets:[
+      {label:'Sales',data:labels.map(d=>bd[d].s),backgroundColor:'#5DCAA5',borderRadius:4,borderSkipped:false},
+      {label:'Expenses',data:labels.map(d=>bd[d].e),backgroundColor:'#F09595',borderRadius:4,borderSkipped:false},
+      {label:'Gain',data:labels.map(d=>bd[d].g),backgroundColor:'#EF9F27',borderRadius:4,borderSkipped:false}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{grid:{display:false},ticks:{color:tc(),font:{size:10}}},y:{grid:{color:gc()},ticks:{color:tc(),callback:yf,font:{size:10}}}}}});
+}
+function buildGainChart(sales){
+  dc('gain');const bi={};sales.forEach(s=>{if(s.gain>0)bi[s.item]=(bi[s.item]||0)+s.gain;});
+  const sorted=Object.entries(bi).sort((a,b)=>b[1]-a[1]).slice(0,6);if(!sorted.length)return;
+  charts['gain']=new Chart(document.getElementById('chartGain'),{type:'bar',
+    data:{labels:sorted.map(e=>e[0]),datasets:[{data:sorted.map(e=>e[1]),backgroundColor:'#EF9F27',borderRadius:6,borderSkipped:false}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{grid:{color:gc()},ticks:{color:tc(),callback:yf,font:{size:10}}},y:{grid:{display:false},ticks:{color:tc(),font:{size:10}}}}}});
+}
+function buildContribChart(sales,companies){
+  dc('contrib');if(!companies.size)return;
+  const labels=[...companies];
+  const data=labels.map(c=>sales.filter(s=>s.company===c).reduce((a,s)=>a+s.total,0));
+  charts['contrib']=new Chart(document.getElementById('chartContrib'),{type:'doughnut',
+    data:{labels,datasets:[{data,backgroundColor:['#1D9E75','#378ADD','#D85A30','#BA7517','#D4537E','#639922','#7F77DD','#888780'],borderWidth:2,borderColor:dark()?'#1e1e1b':'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{color:tc(),font:{size:11},boxWidth:10,padding:12}}}}});
+}
+function buildContribTable(companies,sales,expenses){
+  const tb=document.getElementById('company-contrib');
+  if(!companies.size){tb.innerHTML='<tr><td colspan="6" class="empty">No company data yet</td></tr>';return;}
+  const rows=[...companies].map(c=>{
+    const s=sales.filter(x=>x.company===c).reduce((a,x)=>a+x.total,0);
+    const e=expenses.filter(x=>x.company===c).reduce((a,x)=>a+x.amount,0);
+    const g=sales.filter(x=>x.company===c).reduce((a,x)=>a+(x.gain||0),0);
+    return{c,s,e,g,profit:s-e};
+  }).sort((a,b)=>b.s-a.s);
+  const totS=rows.reduce((a,r)=>a+r.s,0)||1;
+  tb.innerHTML=rows.map(r=>
+    `<tr><td><span class="company-tag">${r.c}</span></td>
+      <td style="color:var(--green-tx)">${fmt(r.s)}</td>
+      <td style="color:var(--red-tx)">${fmt(r.e)}</td>
+      <td style="color:var(--amber-tx)">${fmt(r.g)}</td>
+      <td style="color:${r.profit>=0?'var(--green-tx)':'var(--red-tx)'}">${fmt(r.profit)}</td>
+      <td>${Math.round(r.s/totS*100)}%</td></tr>`
+  ).join('');
+}
+
+/* ── EXPORT ── */
+function exportCSV(){
+  const rows=[['Date/Time','Company','Type','Item/Description','Category','Qty','Unit Price','Total','Gain','Note']];
+  (window._db_sales||[]).forEach(s=>rows.push([s.ts,s.company,s.deleted?'sale-deleted':'sale',s.item,'',s.qty,s.price,s.total,s.gain||0,'']));
+  (window._db_expenses||[]).forEach(e=>rows.push([e.ts,e.company,e.deleted?'expense-deleted':'expense',e.desc,e.cat,'','',e.amount,'','']));
+  const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download='foodtrack-records.csv';a.click();
+  URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>
